@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Layout } from '@/components/layout/Layout';
@@ -13,21 +13,41 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, isLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login, user, isLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !isLoading) {
+      navigate('/directory');
+    }
+  }, [user, isLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
-    const success = await login(email, password);
+    const result = await login(email, password);
     
-    if (success) {
-      navigate('/directory');
+    if (result.error) {
+      setError(result.error);
+      setIsSubmitting(false);
     } else {
-      setError('Invalid credentials. Please check your email and password.');
+      navigate('/directory');
     }
   };
+
+  if (isLoading) {
+    return (
+      <Layout showHeader={false}>
+        <div className="min-h-[calc(100vh-140px)] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout showHeader={false}>
@@ -64,11 +84,11 @@ export default function Login() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="you@ngtsab.org"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                   />
                 </div>
                 
@@ -81,12 +101,12 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                   />
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Signing in...
@@ -116,14 +136,6 @@ export default function Login() {
               Apply for Membership
               <ExternalLink className="h-4 w-4" />
             </a>
-          </div>
-
-          {/* Demo Hint */}
-          <div className="mt-6 p-4 bg-secondary rounded-lg">
-            <p className="text-sm text-muted-foreground text-center">
-              <strong>Demo:</strong> Try logging in with <br />
-              <code className="text-foreground">sarah.chen@example.com</code>
-            </p>
           </div>
         </div>
       </div>
