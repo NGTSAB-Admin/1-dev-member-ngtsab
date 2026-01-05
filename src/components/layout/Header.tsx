@@ -12,7 +12,7 @@ import {
 import { Users, BookOpen, LogOut, User } from 'lucide-react';
 
 export function Header() {
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   const location = useLocation();
 
   const navLinks = [
@@ -21,6 +21,20 @@ export function Header() {
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  const getInitials = () => {
+    if (profile?.full_name) {
+      return profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    }
+    return user?.email?.[0]?.toUpperCase() || 'U';
+  };
+
+  const getDisplayName = () => {
+    if (profile?.full_name) {
+      return profile.full_name.split(' ')[0];
+    }
+    return user?.email?.split('@')[0] || 'User';
+  };
 
   return (
     <header className="bg-card border-b border-border sticky top-0 z-40">
@@ -61,10 +75,10 @@ export function Header() {
                 <Button variant="ghost" className="gap-2">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-accent text-accent-foreground text-sm">
-                      {user.firstName[0]}{user.lastName[0]}
+                      {getInitials()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden sm:inline">{user.firstName}</span>
+                  <span className="hidden sm:inline">{getDisplayName()}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
