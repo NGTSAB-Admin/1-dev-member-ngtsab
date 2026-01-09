@@ -16,12 +16,15 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          biography: string | null
           contact_visibility: boolean | null
           created_at: string | null
           current_projects: string | null
+          duties_and_responsibilities: string | null
           email: string
           full_name: string
           id: string
+          linkedin: string | null
           organization: string | null
           phone: string | null
           public_role: Database["public"]["Enums"]["public_role"]
@@ -29,12 +32,15 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          biography?: string | null
           contact_visibility?: boolean | null
           created_at?: string | null
           current_projects?: string | null
+          duties_and_responsibilities?: string | null
           email: string
           full_name: string
           id: string
+          linkedin?: string | null
           organization?: string | null
           phone?: string | null
           public_role: Database["public"]["Enums"]["public_role"]
@@ -42,12 +48,15 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          biography?: string | null
           contact_visibility?: boolean | null
           created_at?: string | null
           current_projects?: string | null
+          duties_and_responsibilities?: string | null
           email?: string
           full_name?: string
           id?: string
+          linkedin?: string | null
           organization?: string | null
           phone?: string | null
           public_role?: Database["public"]["Enums"]["public_role"]
