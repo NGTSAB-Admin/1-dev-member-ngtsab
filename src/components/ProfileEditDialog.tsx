@@ -28,7 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { Profile, PublicRole } from '@/contexts/AuthContext';
+import { Profile, PublicRole, useAuth } from '@/contexts/AuthContext';
 import { useUpdateProfile } from '@/hooks/useProfiles';
 import { useToast } from '@/hooks/use-toast';
 
@@ -77,7 +77,11 @@ interface ProfileEditDialogProps {
 
 export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: ProfileEditDialogProps) {
   const { toast } = useToast();
+  const { user, isAdmin } = useAuth();
   const updateProfile = useUpdateProfile();
+  
+  // Only admins can change roles - members editing their own profile cannot
+  const canEditRole = isAdmin;
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -191,9 +195,13 @@ export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: Pr
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                    disabled={!canEditRole}
+                  >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className={!canEditRole ? 'opacity-60' : ''}>
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
                     </FormControl>
@@ -205,6 +213,9 @@ export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: Pr
                       ))}
                     </SelectContent>
                   </Select>
+                  {!canEditRole && (
+                    <p className="text-xs text-muted-foreground">Only admins can change roles</p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
