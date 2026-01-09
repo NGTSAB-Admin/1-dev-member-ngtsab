@@ -43,6 +43,9 @@ interface UpdateProfileData {
   state?: string | null;
   organization?: string | null;
   current_projects?: string | null;
+  duties_and_responsibilities?: string | null;
+  biography?: string | null;
+  linkedin?: string | null;
   contact_visibility?: boolean;
 }
 
@@ -78,6 +81,9 @@ interface CreateMemberData {
   state?: string;
   organization?: string;
   current_projects?: string;
+  duties_and_responsibilities?: string;
+  biography?: string;
+  linkedin?: string;
 }
 
 export function useCreateMember() {
@@ -109,6 +115,9 @@ export function useCreateMember() {
           state: data.state || null,
           organization: data.organization || null,
           current_projects: data.current_projects || null,
+          duties_and_responsibilities: data.duties_and_responsibilities || null,
+          biography: data.biography || null,
+          linkedin: data.linkedin || null,
         })
         .eq('id', authData.user.id);
       

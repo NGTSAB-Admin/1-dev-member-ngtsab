@@ -61,6 +61,9 @@ const formSchema = z.object({
   state: z.string().optional(),
   organization: z.string().optional(),
   current_projects: z.string().optional(),
+  duties_and_responsibilities: z.string().optional(),
+  biography: z.string().optional(),
+  linkedin: z.string().url('Invalid LinkedIn URL').optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -85,6 +88,9 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
       state: '',
       organization: '',
       current_projects: '',
+      duties_and_responsibilities: '',
+      biography: '',
+      linkedin: '',
     },
   });
 
@@ -99,6 +105,9 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
         state: data.state,
         organization: data.organization,
         current_projects: data.current_projects,
+        duties_and_responsibilities: data.duties_and_responsibilities,
+        biography: data.biography,
+        linkedin: data.linkedin,
       });
       
       toast({
@@ -262,6 +271,62 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
                     <Textarea 
                       placeholder="Optional" 
                       className="resize-none"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="duties_and_responsibilities"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Duties & Responsibilities</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Optional" 
+                      className="resize-none"
+                      rows={3}
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="biography"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Biography</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Optional" 
+                      className="resize-none"
+                      rows={4}
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="linkedin"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>LinkedIn URL</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="url" 
+                      placeholder="https://linkedin.com/in/yourprofile" 
                       {...field} 
                     />
                   </FormControl>
