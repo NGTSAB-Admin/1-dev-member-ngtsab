@@ -27,7 +27,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
 import { Profile, PublicRole } from '@/contexts/AuthContext';
 import { useUpdateProfile } from '@/hooks/useProfiles';
@@ -62,7 +61,9 @@ const formSchema = z.object({
   state: z.string().optional(),
   organization: z.string().optional(),
   current_projects: z.string().optional(),
-  contact_visibility: z.boolean(),
+  duties_and_responsibilities: z.string().optional(),
+  biography: z.string().optional(),
+  linkedin: z.string().url('Invalid LinkedIn URL').optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -88,7 +89,9 @@ export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: Pr
       state: '',
       organization: '',
       current_projects: '',
-      contact_visibility: true,
+      duties_and_responsibilities: '',
+      biography: '',
+      linkedin: '',
     },
   });
 
@@ -102,7 +105,9 @@ export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: Pr
         state: profile.state || '',
         organization: profile.organization || '',
         current_projects: profile.current_projects || '',
-        contact_visibility: profile.contact_visibility,
+        duties_and_responsibilities: profile.duties_and_responsibilities || '',
+        biography: profile.biography || '',
+        linkedin: profile.linkedin || '',
       });
     }
   }, [profile, form]);
@@ -118,6 +123,10 @@ export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: Pr
         state: data.state || null,
         organization: data.organization || null,
         current_projects: data.current_projects || null,
+        duties_and_responsibilities: data.duties_and_responsibilities || null,
+        biography: data.biography || null,
+        linkedin: data.linkedin || null,
+        contact_visibility: true, // Always visible
       });
       
       toast({
@@ -274,21 +283,56 @@ export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: Pr
             
             <FormField
               control={form.control}
-              name="contact_visibility"
+              name="duties_and_responsibilities"
               render={({ field }) => (
-                <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <FormLabel>Visible in Directory</FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      Allow other members to see your profile
-                    </p>
-                  </div>
+                <FormItem>
+                  <FormLabel>Duties & Responsibilities</FormLabel>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
+                    <Textarea 
+                      placeholder="Describe your duties and responsibilities (optional)" 
+                      className="resize-none"
+                      rows={3}
+                      {...field} 
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="biography"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Biography</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Tell us about yourself (optional)" 
+                      className="resize-none"
+                      rows={4}
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="linkedin"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>LinkedIn URL</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="url" 
+                      placeholder="https://linkedin.com/in/yourprofile" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
                 </FormItem>
               )}
             />
