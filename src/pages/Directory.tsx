@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useProfiles, useDeleteMember } from '@/hooks/useProfiles';
 import { useAuth, PublicRole, Profile } from '@/contexts/AuthContext';
@@ -197,81 +198,89 @@ export default function Directory() {
         {/* Member Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredProfiles.map(profile => (
-            <Card key={profile.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-5">
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-foreground truncate">
-                        {profile.full_name}
-                      </h3>
-                      <div className="flex gap-1 shrink-0">
-                        {canEdit(profile) && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => setEditingProfile(profile)}
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {canDelete(profile) && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => setDeletingProfile(profile)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+            <Link key={profile.id} to={`/profile/${profile.id}`}>
+              <Card className="hover:shadow-md transition-shadow h-full cursor-pointer">
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold text-foreground truncate">
+                          {profile.full_name}
+                        </h3>
+                        <div className="flex gap-1 shrink-0" onClick={(e) => e.preventDefault()}>
+                          {canEdit(profile) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setEditingProfile(profile);
+                              }}
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {canDelete(profile) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setDeletingProfile(profile);
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {profile.email}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <Badge variant="secondary" className={roleColors[profile.public_role]}>
+                          {roleLabels[profile.public_role]}
+                        </Badge>
+                        {profile.state && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {profile.state}
+                          </span>
                         )}
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {profile.email}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <Badge variant="secondary" className={roleColors[profile.public_role]}>
-                        {roleLabels[profile.public_role]}
-                      </Badge>
-                      {profile.state && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {profile.state}
-                        </span>
-                      )}
-                    </div>
                   </div>
-                </div>
-                
-                <div className="mt-3 space-y-1">
-                  {profile.phone && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Phone className="h-3 w-3" />
-                      {profile.phone}
-                    </p>
-                  )}
-                  {profile.organization && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Building2 className="h-3 w-3" />
-                      {profile.organization}
-                    </p>
-                  )}
-                  {profile.current_projects && (
-                    <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-                      <FileText className="h-3 w-3 mt-0.5 shrink-0" />
-                      <span className="line-clamp-2">{profile.current_projects}</span>
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  
+                  <div className="mt-3 space-y-1">
+                    {profile.phone && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Phone className="h-3 w-3" />
+                        {profile.phone}
+                      </p>
+                    )}
+                    {profile.organization && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Building2 className="h-3 w-3" />
+                        {profile.organization}
+                      </p>
+                    )}
+                    {profile.current_projects && (
+                      <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                        <FileText className="h-3 w-3 mt-0.5 shrink-0" />
+                        <span className="line-clamp-2">{profile.current_projects}</span>
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
 

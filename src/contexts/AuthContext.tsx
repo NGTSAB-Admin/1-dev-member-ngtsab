@@ -14,6 +14,9 @@ export interface Profile {
   state: string | null;
   organization: string | null;
   current_projects: string | null;
+  duties_and_responsibilities: string | null;
+  biography: string | null;
+  linkedin: string | null;
   contact_visibility: boolean;
   created_at: string;
   updated_at: string;
