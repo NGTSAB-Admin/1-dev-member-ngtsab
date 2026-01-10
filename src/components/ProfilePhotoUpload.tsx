@@ -5,6 +5,73 @@ import { Camera, Loader2, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+const MAX_FILE_SIZE = 100 * 1024; // 100KB
+const MAX_DIMENSION = 512; // Max width/height for profile photos
+
+async function compressImage(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+      
+      // Calculate new dimensions maintaining aspect ratio
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height * MAX_DIMENSION) / width);
+          width = MAX_DIMENSION;
+        } else {
+          width = Math.round((width * MAX_DIMENSION) / height);
+          height = MAX_DIMENSION;
+        }
+      }
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+      
+      // Use high-quality image smoothing
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Try different quality levels to get under 100KB
+      const tryCompress = (quality: number): void => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Failed to compress image'));
+              return;
+            }
+            
+            if (blob.size <= MAX_FILE_SIZE || quality <= 0.1) {
+              resolve(blob);
+            } else {
+              // Reduce quality and try again
+              tryCompress(quality - 0.1);
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      
+      tryCompress(0.9);
+    };
+    
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 interface ProfilePhotoUploadProps {
   userId: string;
   currentPhotoUrl: string | null;
@@ -60,19 +127,24 @@ export function ProfilePhotoUpload({
     setIsUploading(true);
 
     try {
+      // Compress image before upload
+      const compressedBlob = await compressImage(file);
+      
       // Delete old photo if exists
       if (currentPhotoUrl) {
         const oldPath = currentPhotoUrl.split('/').slice(-2).join('/');
         await supabase.storage.from('profile-photos').remove([oldPath]);
       }
 
-      // Upload new photo
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}/${Date.now()}.${fileExt}`;
+      // Upload compressed photo (always as .jpg after compression)
+      const fileName = `${userId}/${Date.now()}.jpg`;
       
       const { error: uploadError } = await supabase.storage
         .from('profile-photos')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, compressedBlob, { 
+          upsert: true,
+          contentType: 'image/jpeg'
+        });
 
       if (uploadError) throw uploadError;
 
