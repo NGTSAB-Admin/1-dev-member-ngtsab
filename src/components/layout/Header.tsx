@@ -82,9 +82,11 @@ export function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem className="gap-2">
-                  <User className="h-4 w-4" />
-                  Profile
+                <DropdownMenuItem className="gap-2" asChild>
+                  <Link to={`/profile/${user?.id}`}>
+                    <User className="h-4 w-4" />
+                    Profile
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="gap-2 text-destructive">

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { useProfile } from "@/hooks/useProfiles";
@@ -5,10 +6,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Mail, Phone, MapPin, Building2, Briefcase, Linkedin, Loader2, Lock } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building2, Briefcase, Linkedin, Loader2, Lock, Edit2 } from "lucide-react";
 import { PublicRole } from "@/contexts/AuthContext";
+import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 
 const roleLabels: Record<PublicRole, string> = {
   president: 'President',
@@ -32,10 +34,12 @@ const roleColors: Record<PublicRole, string> = {
 
 export default function ProfileDetail() {
   const { id } = useParams<{ id: string }>();
-  const { data: profile, isLoading } = useProfile(id || "");
-  const { user, isAdmin } = useAuth();
+  const { data: profile, isLoading, refetch } = useProfile(id || "");
+  const { user, isAdmin, refreshProfile } = useAuth();
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const isOwnProfile = user?.id === id;
+  const canEdit = isOwnProfile || isAdmin;
   const canViewPrivateInfo = isOwnProfile || isAdmin || profile?.contact_visibility;
 
   if (isLoading) {
@@ -76,6 +80,13 @@ export default function ProfileDetail() {
       .slice(0, 2);
   };
 
+  const handleEditSuccess = () => {
+    refetch();
+    if (isOwnProfile) {
+      refreshProfile();
+    }
+  };
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -88,6 +99,7 @@ export default function ProfileDetail() {
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               <Avatar className="h-24 w-24 text-2xl">
+                <AvatarImage src={profile.profile_photo_url || undefined} alt={profile.full_name} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
                   {getInitials(profile.full_name)}
                 </AvatarFallback>
@@ -103,18 +115,26 @@ export default function ProfileDetail() {
                   <p className="text-lg text-muted-foreground">{profile.organization}</p>
                 )}
               </div>
-              {profile.linkedin && (
-                <a
-                  href={profile.linkedin.startsWith("http") ? profile.linkedin : `https://${profile.linkedin}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button variant="outline" size="sm">
-                    <Linkedin className="h-4 w-4 mr-2" />
-                    LinkedIn
+              <div className="flex gap-2">
+                {canEdit && (
+                  <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)}>
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit
                   </Button>
-                </a>
-              )}
+                )}
+                {profile.linkedin && (
+                  <a
+                    href={profile.linkedin.startsWith("http") ? profile.linkedin : `https://${profile.linkedin}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="outline" size="sm">
+                      <Linkedin className="h-4 w-4 mr-2" />
+                      LinkedIn
+                    </Button>
+                  </a>
+                )}
+              </div>
             </div>
           </CardHeader>
 
@@ -201,6 +221,14 @@ export default function ProfileDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Profile Dialog */}
+      <ProfileEditDialog
+        profile={profile}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSuccess={handleEditSuccess}
+      />
     </Layout>
   );
 }

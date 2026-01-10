@@ -46,6 +46,7 @@ interface UpdateProfileData {
   duties_and_responsibilities?: string | null;
   biography?: string | null;
   linkedin?: string | null;
+  profile_photo_url?: string | null;
   contact_visibility?: boolean;
 }
 

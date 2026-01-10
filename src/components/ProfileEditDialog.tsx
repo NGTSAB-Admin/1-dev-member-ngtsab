@@ -31,6 +31,7 @@ import { Loader2 } from 'lucide-react';
 import { Profile, PublicRole, useAuth } from '@/contexts/AuthContext';
 import { useUpdateProfile } from '@/hooks/useProfiles';
 import { useToast } from '@/hooks/use-toast';
+import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
 
 const publicRoleOptions: { value: PublicRole; label: string }[] = [
   { value: 'president', label: 'President' },
@@ -79,6 +80,7 @@ export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: Pr
   const { toast } = useToast();
   const { user, isAdmin } = useAuth();
   const updateProfile = useUpdateProfile();
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   
   // Only admins can change roles - members editing their own profile cannot
   const canEditRole = isAdmin;
@@ -113,6 +115,7 @@ export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: Pr
         biography: profile.biography || '',
         linkedin: profile.linkedin || '',
       });
+      setPhotoUrl(profile.profile_photo_url);
     }
   }, [profile, form]);
 
@@ -130,6 +133,7 @@ export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: Pr
         duties_and_responsibilities: data.duties_and_responsibilities || null,
         biography: data.biography || null,
         linkedin: data.linkedin || null,
+        profile_photo_url: photoUrl,
         contact_visibility: true, // Always visible
       });
       
@@ -161,6 +165,18 @@ export function ProfileEditDialog({ profile, open, onOpenChange, onSuccess }: Pr
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Profile Photo */}
+            {profile && (
+              <div className="flex justify-center pb-2">
+                <ProfilePhotoUpload
+                  userId={profile.id}
+                  currentPhotoUrl={photoUrl}
+                  fullName={profile.full_name}
+                  onPhotoChange={setPhotoUrl}
+                />
+              </div>
+            )}
+            
             <FormField
               control={form.control}
               name="full_name"

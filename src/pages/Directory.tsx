@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Select,
   SelectContent,
@@ -203,6 +203,7 @@ export default function Directory() {
                 <CardContent className="p-5">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-12 w-12">
+                      <AvatarImage src={profile.profile_photo_url || undefined} alt={profile.full_name} />
                       <AvatarFallback className="bg-primary text-primary-foreground">
                         {profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                       </AvatarFallback>
