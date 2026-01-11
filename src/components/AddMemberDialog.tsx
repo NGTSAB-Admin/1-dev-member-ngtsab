@@ -26,9 +26,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Loader2, Mail } from 'lucide-react';
 import { PublicRole } from '@/contexts/AuthContext';
-import { useCreateMember } from '@/hooks/useProfiles';
+import { useInviteMember } from '@/hooks/useInviteMember';
 import { useToast } from '@/hooks/use-toast';
 
 const publicRoleOptions: { value: PublicRole; label: string }[] = [
@@ -55,7 +55,6 @@ const US_STATES = [
 const formSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
   public_role: z.enum(['advisor', 'executive_board', 'board_of_directors', 'president', 'vice_president', 'state_representative', 'alumni']),
   phone: z.string().optional(),
   state: z.string().optional(),
@@ -75,14 +74,13 @@ interface AddMemberDialogProps {
 
 export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
   const { toast } = useToast();
-  const createMember = useCreateMember();
+  const inviteMember = useInviteMember();
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       full_name: '',
       email: '',
-      password: '',
       public_role: 'alumni',
       phone: '',
       state: '',
@@ -96,9 +94,8 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
 
   const onSubmit = async (data: FormData) => {
     try {
-      await createMember.mutateAsync({
+      await inviteMember.mutateAsync({
         email: data.email,
-        password: data.password,
         full_name: data.full_name,
         public_role: data.public_role,
         phone: data.phone,
@@ -111,8 +108,8 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
       });
       
       toast({
-        title: 'Member added',
-        description: `${data.full_name} has been added to the directory.`,
+        title: 'Invitation sent',
+        description: `An invitation email has been sent to ${data.email}.`,
       });
       
       form.reset();
@@ -120,7 +117,7 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
     } catch (error) {
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to add member',
+        description: error instanceof Error ? error.message : 'Failed to send invitation',
         variant: 'destructive',
       });
     }
@@ -131,11 +128,11 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Add New Member
+            <Mail className="h-5 w-5" />
+            Invite New Member
           </DialogTitle>
           <DialogDescription>
-            Create a new member account with login credentials
+            Send an email invitation to add a new member. They'll receive a link to set up their account.
           </DialogDescription>
         </DialogHeader>
         
@@ -163,20 +160,6 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
                   <FormLabel>Email *</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="john@ngtsab.org" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password *</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Minimum 6 characters" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -339,9 +322,9 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMember.isPending}>
-                {createMember.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add Member
+              <Button type="submit" disabled={inviteMember.isPending}>
+                {inviteMember.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send Invitation
               </Button>
             </div>
           </form>
