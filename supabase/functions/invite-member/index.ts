@@ -97,7 +97,7 @@ serve(async (req: Request): Promise<Response> => {
     const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       body.email,
       {
-        redirectTo: `${req.headers.get("origin") || supabaseUrl}/set-password`,
+        redirectTo: `${req.headers.get("origin") || supabaseUrl}/login`,
         data: {
           full_name: body.full_name,
           public_role: body.public_role,

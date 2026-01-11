@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
-import SetPassword from "./pages/SetPassword";
 import Directory from "./pages/Directory";
 import ProfileDetail from "./pages/ProfileDetail";
 import Resources from "./pages/Resources";
@@ -24,7 +23,6 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/set-password" element={<SetPassword />} />
             <Route
               path="/directory"
               element={
