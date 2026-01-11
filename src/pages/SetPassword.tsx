@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,43 +6,50 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Lock, CheckCircle } from 'lucide-react';
+import { Loader2, Lock, CheckCircle, Mail } from 'lucide-react';
 
 export default function SetPassword() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [invitationData, setInvitationData] = useState<{ id: string } | null>(null);
 
-  useEffect(() => {
-    // Check if user arrived via invite link (they'll have a session from the magic link)
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        setIsAuthenticated(true);
-      } else {
-        // No session means invalid or expired link
-        setError('Invalid or expired invitation link. Please contact an administrator for a new invitation.');
+  const handleVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsVerifying(true);
+
+    try {
+      // Check if there's a pending invitation for this email
+      const { data: invitation, error: inviteError } = await supabase
+        .from('pending_invitations')
+        .select('id')
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle();
+
+      if (inviteError) {
+        setError('An error occurred while checking your invitation. Please try again.');
+        return;
       }
-      setIsLoading(false);
-    };
 
-    // Listen for auth state changes (user clicking invite link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        setIsAuthenticated(true);
-        setIsLoading(false);
+      if (!invitation) {
+        setError('No pending invitation found for this email address. Please contact an administrator.');
+        return;
       }
-    });
 
-    checkSession();
-
-    return () => subscription.unsubscribe();
-  }, []);
+      setInvitationData(invitation);
+      setIsVerified(true);
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,13 +68,31 @@ export default function SetPassword() {
     setIsSubmitting(true);
 
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
+      // Sign up the user with their email and new password
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: email.toLowerCase().trim(),
         password: password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/directory`,
+        },
       });
 
-      if (updateError) {
-        setError(updateError.message);
-        return;
+      if (signUpError) {
+        // If user already exists, try to sign them in
+        if (signUpError.message.includes('already registered')) {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: email.toLowerCase().trim(),
+            password: password,
+          });
+          
+          if (signInError) {
+            setError('This email is already registered. Please use the login page.');
+            return;
+          }
+        } else {
+          setError(signUpError.message);
+          return;
+        }
       }
 
       // Password set successfully, redirect to directory
@@ -79,31 +104,57 @@ export default function SetPassword() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Lock className="h-6 w-6 text-primary" />
+            {isVerified ? <Lock className="h-6 w-6 text-primary" /> : <Mail className="h-6 w-6 text-primary" />}
           </div>
-          <CardTitle className="text-2xl">Set Your Password</CardTitle>
+          <CardTitle className="text-2xl">
+            {isVerified ? 'Set Your Password' : 'Verify Your Invitation'}
+          </CardTitle>
           <CardDescription>
-            Welcome! Please create a password to complete your account setup.
+            {isVerified 
+              ? 'Create a password to complete your account setup.'
+              : 'Enter the email address where you received your invitation.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!isAuthenticated ? (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+          {!isVerified ? (
+            <form onSubmit={handleVerifyEmail} className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isVerifying}>
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Verify Email
+                  </>
+                )}
+              </Button>
+            </form>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
@@ -111,6 +162,11 @@ export default function SetPassword() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input value={email} disabled className="bg-muted" />
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password">New Password</Label>
@@ -142,7 +198,7 @@ export default function SetPassword() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Setting Password...
+                    Creating Account...
                   </>
                 ) : (
                   <>
