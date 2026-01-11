@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      pending_invitations: {
+        Row: {
+          biography: string | null
+          created_at: string | null
+          current_projects: string | null
+          duties_and_responsibilities: string | null
+          email: string
+          expires_at: string | null
+          full_name: string
+          id: string
+          invited_by: string | null
+          linkedin: string | null
+          organization: string | null
+          phone: string | null
+          public_role: Database["public"]["Enums"]["public_role"]
+          state: string | null
+        }
+        Insert: {
+          biography?: string | null
+          created_at?: string | null
+          current_projects?: string | null
+          duties_and_responsibilities?: string | null
+          email: string
+          expires_at?: string | null
+          full_name: string
+          id?: string
+          invited_by?: string | null
+          linkedin?: string | null
+          organization?: string | null
+          phone?: string | null
+          public_role?: Database["public"]["Enums"]["public_role"]
+          state?: string | null
+        }
+        Update: {
+          biography?: string | null
+          created_at?: string | null
+          current_projects?: string | null
+          duties_and_responsibilities?: string | null
+          email?: string
+          expires_at?: string | null
+          full_name?: string
+          id?: string
+          invited_by?: string | null
+          linkedin?: string | null
+          organization?: string | null
+          phone?: string | null
+          public_role?: Database["public"]["Enums"]["public_role"]
+          state?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           biography: string | null
