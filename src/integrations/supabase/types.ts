@@ -28,6 +28,7 @@ export type Database = {
           organization: string | null
           phone: string | null
           profile_photo_url: string | null
+          public_email: string | null
           public_role: Database["public"]["Enums"]["public_role"]
           state: string | null
           updated_at: string | null
@@ -45,6 +46,7 @@ export type Database = {
           organization?: string | null
           phone?: string | null
           profile_photo_url?: string | null
+          public_email?: string | null
           public_role: Database["public"]["Enums"]["public_role"]
           state?: string | null
           updated_at?: string | null
@@ -62,6 +64,7 @@ export type Database = {
           organization?: string | null
           phone?: string | null
           profile_photo_url?: string | null
+          public_email?: string | null
           public_role?: Database["public"]["Enums"]["public_role"]
           state?: string | null
           updated_at?: string | null
