@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Lock, CheckCircle, Mail } from 'lucide-react';
+import { Loader2, Lock, CheckCircle, Mail, ArrowLeft } from 'lucide-react';
+import { Session } from '@supabase/supabase-js';
 
 export default function SetPassword() {
   const navigate = useNavigate();
@@ -17,7 +18,83 @@ export default function SetPassword() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
-  const [invitationData, setInvitationData] = useState<{ id: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    // Check if user arrived with a valid session from email link
+    const checkSession = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (currentSession?.user?.email) {
+          // User clicked the email link and has a valid session
+          const userEmail = currentSession.user.email.toLowerCase();
+          setEmail(userEmail);
+          setSession(currentSession);
+          
+          // Check if they have a pending invitation
+          const { data: invitation } = await supabase
+            .from('pending_invitations')
+            .select('id')
+            .eq('email', userEmail)
+            .maybeSingle();
+          
+          if (invitation) {
+            // They have a pending invitation, let them set password
+            setIsVerified(true);
+          } else {
+            // Check if they already have a profile (registration already complete)
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('id', currentSession.user.id)
+              .maybeSingle();
+            
+            if (profile) {
+              // Already registered, redirect to directory
+              navigate('/directory');
+              return;
+            }
+            
+            // No invitation and no profile - shouldn't happen, but let them verify manually
+            setSession(null);
+          }
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Listen for auth state changes (handles the redirect from email)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        if (event === 'SIGNED_IN' && newSession?.user?.email) {
+          const userEmail = newSession.user.email.toLowerCase();
+          setEmail(userEmail);
+          setSession(newSession);
+          
+          // Check for pending invitation
+          const { data: invitation } = await supabase
+            .from('pending_invitations')
+            .select('id')
+            .eq('email', userEmail)
+            .maybeSingle();
+          
+          if (invitation) {
+            setIsVerified(true);
+          }
+          setIsLoading(false);
+        }
+      }
+    );
+
+    checkSession();
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const handleVerifyEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,11 +102,13 @@ export default function SetPassword() {
     setIsVerifying(true);
 
     try {
+      const trimmedEmail = email.toLowerCase().trim();
+      
       // Check if there's a pending invitation for this email
       const { data: invitation, error: inviteError } = await supabase
         .from('pending_invitations')
         .select('id')
-        .eq('email', email.toLowerCase().trim())
+        .eq('email', trimmedEmail)
         .maybeSingle();
 
       if (inviteError) {
@@ -38,11 +117,10 @@ export default function SetPassword() {
       }
 
       if (!invitation) {
-        setError('No pending invitation found for this email address. Please contact an administrator.');
+        setError('No pending invitation found for this email address. Please check your email or contact an administrator.');
         return;
       }
 
-      setInvitationData(invitation);
       setIsVerified(true);
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
@@ -70,14 +148,40 @@ export default function SetPassword() {
     try {
       const trimmedEmail = email.toLowerCase().trim();
       
-      // First, try to sign in (in case user already set password via auth link)
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      // If we have a session (user clicked email link), update password directly
+      if (session) {
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: password,
+        });
+
+        if (updateError) {
+          setError(updateError.message);
+          return;
+        }
+
+        // Complete registration
+        const { error: regError } = await supabase.functions.invoke('complete-registration', {
+          body: { email: trimmedEmail },
+        });
+
+        if (regError) {
+          console.error('Registration error:', regError);
+          // Continue anyway - profile might already exist
+        }
+
+        navigate('/directory');
+        return;
+      }
+
+      // No session - user is manually entering email
+      // First check if user already exists in auth
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: password,
       });
 
-      if (!signInError) {
-        // User already has account with this password, complete their registration
+      if (!signInError && signInData.user) {
+        // User exists with this password, complete registration
         await supabase.functions.invoke('complete-registration', {
           body: { email: trimmedEmail },
         });
@@ -85,53 +189,56 @@ export default function SetPassword() {
         return;
       }
 
-      // Try to update password if user exists but password is wrong
-      // This handles the case where they clicked the invite link
-      const { data: updateData, error: updateError } = await supabase.auth.updateUser({
-        password: password,
-      });
-
-      if (!updateError && updateData.user) {
-        // Password updated, complete registration
-        await supabase.functions.invoke('complete-registration', {
-          body: { email: trimmedEmail },
-        });
-        navigate('/directory');
-        return;
-      }
-
-      // If update fails, try signing up as a new user
+      // Try to sign up the user (for cases where invite link wasn't clicked)
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: trimmedEmail,
         password: password,
         options: {
-          emailRedirectTo: `${window.location.origin}/directory`,
+          emailRedirectTo: 'https://member.ngtsab.org/directory',
         },
       });
 
       if (signUpError) {
         if (signUpError.message.includes('already registered')) {
-          setError('This email is already registered. Please try a different password or use the login page.');
+          setError('This email is already registered. Please click the invitation link in your email, or try logging in with your password.');
         } else {
           setError(signUpError.message);
         }
         return;
       }
 
-      // Complete registration after signup
       if (signUpData.user) {
+        // Complete registration
         await supabase.functions.invoke('complete-registration', {
           body: { email: trimmedEmail },
         });
+        navigate('/directory');
       }
-
-      navigate('/directory');
     } catch (err) {
+      console.error('Unexpected error:', err);
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleBack = () => {
+    setIsVerified(false);
+    setError(null);
+    setPassword('');
+    setConfirmPassword('');
+    if (!session) {
+      setEmail('');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -236,6 +343,18 @@ export default function SetPassword() {
                   </>
                 )}
               </Button>
+
+              {!session && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={handleBack}
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Email Verification
+                </Button>
+              )}
             </form>
           )}
         </CardContent>
