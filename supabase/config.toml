@@ -1,4 +1,7 @@
 project_id = "fhxshznbkvnphysqhgje"
 
+[functions.complete-registration]
+verify_jwt = false
+
 [functions.invite-member]
 verify_jwt = false

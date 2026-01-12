@@ -68,9 +68,41 @@ export default function SetPassword() {
     setIsSubmitting(true);
 
     try {
-      // Sign up the user with their email and new password
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: email.toLowerCase().trim(),
+      const trimmedEmail = email.toLowerCase().trim();
+      
+      // First, try to sign in (in case user already set password via auth link)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password: password,
+      });
+
+      if (!signInError) {
+        // User already has account with this password, complete their registration
+        await supabase.functions.invoke('complete-registration', {
+          body: { email: trimmedEmail },
+        });
+        navigate('/directory');
+        return;
+      }
+
+      // Try to update password if user exists but password is wrong
+      // This handles the case where they clicked the invite link
+      const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+        password: password,
+      });
+
+      if (!updateError && updateData.user) {
+        // Password updated, complete registration
+        await supabase.functions.invoke('complete-registration', {
+          body: { email: trimmedEmail },
+        });
+        navigate('/directory');
+        return;
+      }
+
+      // If update fails, try signing up as a new user
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: trimmedEmail,
         password: password,
         options: {
           emailRedirectTo: `${window.location.origin}/directory`,
@@ -78,24 +110,21 @@ export default function SetPassword() {
       });
 
       if (signUpError) {
-        // If user already exists, try to sign them in
         if (signUpError.message.includes('already registered')) {
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: email.toLowerCase().trim(),
-            password: password,
-          });
-          
-          if (signInError) {
-            setError('This email is already registered. Please use the login page.');
-            return;
-          }
+          setError('This email is already registered. Please try a different password or use the login page.');
         } else {
           setError(signUpError.message);
-          return;
         }
+        return;
       }
 
-      // Password set successfully, redirect to directory
+      // Complete registration after signup
+      if (signUpData.user) {
+        await supabase.functions.invoke('complete-registration', {
+          body: { email: trimmedEmail },
+        });
+      }
+
       navigate('/directory');
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
