@@ -43,13 +43,6 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    if (!invitation) {
-      return new Response(
-        JSON.stringify({ error: "No pending invitation found for this email" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Find the user by email
     const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
     
@@ -67,6 +60,58 @@ serve(async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({ error: "User not found. Please complete signup first." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If no pending invitation, check if profile already exists
+    if (!invitation) {
+      console.log("No pending invitation found, checking for existing profile...");
+      
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (existingProfile) {
+        console.log("Profile already exists for:", email);
+        return new Response(
+          JSON.stringify({ success: true, message: "Profile already exists" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Create a basic profile from user metadata
+      const userMeta = user.user_metadata || {};
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: user.id,
+          full_name: userMeta.full_name || email.split('@')[0],
+          email: email,
+          public_role: userMeta.public_role || 'member',
+        });
+      
+      if (profileError && profileError.code !== '23505') {
+        console.error("Error creating basic profile:", profileError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create profile" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Create member role
+      const { error: roleErr } = await supabaseAdmin
+        .from('user_roles')
+        .insert({ user_id: user.id, role: 'member' });
+      
+      if (roleErr && roleErr.code !== '23505') {
+        console.log("Non-critical role creation error:", roleErr);
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

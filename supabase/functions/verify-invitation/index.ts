@@ -24,6 +24,8 @@ serve(async (req: Request): Promise<Response> => {
     const body: VerifyInvitationRequest = await req.json();
     const email = (body.email || "").toLowerCase().trim();
 
+    console.log("Verifying invitation for:", email);
+
     if (!email) {
       return new Response(
         JSON.stringify({ error: "Email is required" }),
@@ -33,9 +35,11 @@ serve(async (req: Request): Promise<Response> => {
 
     const { data, error } = await supabaseAdmin
       .from("pending_invitations")
-      .select("id")
+      .select("id, email, full_name")
       .eq("email", email)
       .maybeSingle();
+
+    console.log("Invitation query result:", { data, error });
 
     if (error) {
       console.error("verify-invitation error:", error);
