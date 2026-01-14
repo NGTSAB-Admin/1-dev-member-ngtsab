@@ -26,40 +26,37 @@ export default function SetPassword() {
     const checkSession = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
+
         if (currentSession?.user?.email) {
-          // User clicked the email link and has a valid session
           const userEmail = currentSession.user.email.toLowerCase();
           setEmail(userEmail);
           setSession(currentSession);
-          
-          // Check if they have a pending invitation
-          const { data: invitation } = await supabase
-            .from('pending_invitations')
-            .select('id')
-            .eq('email', userEmail)
-            .maybeSingle();
-          
-          if (invitation) {
-            // They have a pending invitation, let them set password
+
+          // RLS prevents invited users from reading pending_invitations directly from the client.
+          // Use an edge function (service role) to validate the invitation.
+          const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-invitation', {
+            body: { email: userEmail },
+          });
+
+          if (!verifyError && verifyData?.exists) {
             setIsVerified(true);
-          } else {
-            // Check if they already have a profile (registration already complete)
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('id', currentSession.user.id)
-              .maybeSingle();
-            
-            if (profile) {
-              // Already registered, redirect to directory
-              navigate('/directory');
-              return;
-            }
-            
-            // No invitation and no profile - shouldn't happen, but let them verify manually
-            setSession(null);
+            return;
           }
+
+          // If no invitation, check if they already completed registration
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', currentSession.user.id)
+            .maybeSingle();
+
+          if (profile) {
+            navigate('/directory');
+            return;
+          }
+
+          // Let them proceed with manual verification if needed
+          setSession(null);
         }
       } catch (err) {
         console.error('Error checking session:', err);
@@ -75,17 +72,15 @@ export default function SetPassword() {
           const userEmail = newSession.user.email.toLowerCase();
           setEmail(userEmail);
           setSession(newSession);
-          
-          // Check for pending invitation
-          const { data: invitation } = await supabase
-            .from('pending_invitations')
-            .select('id')
-            .eq('email', userEmail)
-            .maybeSingle();
-          
-          if (invitation) {
+
+          const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-invitation', {
+            body: { email: userEmail },
+          });
+
+          if (!verifyError && verifyData?.exists) {
             setIsVerified(true);
           }
+
           setIsLoading(false);
         }
       }
@@ -103,20 +98,19 @@ export default function SetPassword() {
 
     try {
       const trimmedEmail = email.toLowerCase().trim();
-      
-      // Check if there's a pending invitation for this email
-      const { data: invitation, error: inviteError } = await supabase
-        .from('pending_invitations')
-        .select('id')
-        .eq('email', trimmedEmail)
-        .maybeSingle();
 
-      if (inviteError) {
+      // RLS prevents client-side reads of pending_invitations for invited users.
+      // Verify via edge function instead.
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-invitation', {
+        body: { email: trimmedEmail },
+      });
+
+      if (verifyError) {
         setError('An error occurred while checking your invitation. Please try again.');
         return;
       }
 
-      if (!invitation) {
+      if (!verifyData?.exists) {
         setError('No pending invitation found for this email address. Please check your email or contact an administrator.');
         return;
       }
