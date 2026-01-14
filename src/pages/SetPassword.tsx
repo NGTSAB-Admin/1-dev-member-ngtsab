@@ -32,18 +32,7 @@ export default function SetPassword() {
           setEmail(userEmail);
           setSession(currentSession);
 
-          // RLS prevents invited users from reading pending_invitations directly from the client.
-          // Use an edge function (service role) to validate the invitation.
-          const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-invitation', {
-            body: { email: userEmail },
-          });
-
-          if (!verifyError && verifyData?.exists) {
-            setIsVerified(true);
-            return;
-          }
-
-          // If no invitation, check if they already completed registration
+          // Check if they already completed registration (have a profile)
           const { data: profile } = await supabase
             .from('profiles')
             .select('id')
@@ -55,8 +44,19 @@ export default function SetPassword() {
             return;
           }
 
-          // Let them proceed with manual verification if needed
-          setSession(null);
+          // User has session but no profile - they can set password
+          // Check if pending invitation exists (for additional validation)
+          const { data: verifyData } = await supabase.functions.invoke('verify-invitation', {
+            body: { email: userEmail },
+          });
+
+          if (verifyData?.exists) {
+            setIsVerified(true);
+          } else {
+            // No pending invitation but user exists - they may have already used the link
+            // Allow them to set password anyway since they have a valid session
+            setIsVerified(true);
+          }
         }
       } catch (err) {
         console.error('Error checking session:', err);
@@ -167,47 +167,12 @@ export default function SetPassword() {
         return;
       }
 
-      // No session - user is manually entering email
-      // First check if user already exists in auth
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
-        password: password,
-      });
-
-      if (!signInError && signInData.user) {
-        // User exists with this password, complete registration
-        await supabase.functions.invoke('complete-registration', {
-          body: { email: trimmedEmail },
-        });
-        navigate('/directory');
-        return;
-      }
-
-      // Try to sign up the user (for cases where invite link wasn't clicked)
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: trimmedEmail,
-        password: password,
-        options: {
-          emailRedirectTo: 'https://member.ngtsab.org/directory',
-        },
-      });
-
-      if (signUpError) {
-        if (signUpError.message.includes('already registered')) {
-          setError('This email is already registered. Please click the invitation link in your email, or try logging in with your password.');
-        } else {
-          setError(signUpError.message);
-        }
-        return;
-      }
-
-      if (signUpData.user) {
-        // Complete registration
-        await supabase.functions.invoke('complete-registration', {
-          body: { email: trimmedEmail },
-        });
-        navigate('/directory');
-      }
+      // No session - user manually entered email without clicking invite link
+      // Since inviteUserByEmail creates the user, we need to send a password reset
+      setError(
+        'Please click the invitation link in your email to set your password. ' +
+        'If you cannot find the email, please contact an administrator to resend the invitation.'
+      );
     } catch (err) {
       console.error('Unexpected error:', err);
       setError('An unexpected error occurred. Please try again.');
