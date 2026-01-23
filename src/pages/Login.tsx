@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -16,13 +16,17 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get the path user was trying to access, default to /directory
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/directory';
 
   // Redirect if already logged in
   useEffect(() => {
     if (user && !isLoading) {
-      navigate('/directory');
+      navigate(from, { replace: true });
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +39,7 @@ export default function Login() {
       setError(result.error);
       setIsSubmitting(false);
     } else {
-      navigate('/directory');
+      navigate(from, { replace: true });
     }
   };
 
