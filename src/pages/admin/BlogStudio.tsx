@@ -1,21 +1,24 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createBrowserHistory } from 'history';
-import { Studio, type StudioProps } from 'sanity';
-import config from '@/sanity/sanity.config';
+import { Studio } from 'sanity';
+import baseConfig from '@/sanity/sanity.config';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+
+// Stable history instance at module scope
+const history = createBrowserHistory({ window });
+
+// Stable config at module scope - never recreated
+const studioConfig = {
+  ...baseConfig,
+  unstable_history: history,
+};
 
 export default function BlogStudio() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Let Sanity own its router using the standard `history` implementation.
-  // This avoids subtle mismatches with react-router's internal history.
-  const history = useMemo(
-    () => createBrowserHistory({ window }),
-    []
-  );
   const [isBlogger, setIsBlogger] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(true);
 
@@ -55,7 +58,6 @@ export default function BlogStudio() {
   }
 
   if (!user) {
-    // Avoid calling navigate during render
     queueMicrotask(() => navigate('/login'));
     return null;
   }
@@ -76,11 +78,6 @@ export default function BlogStudio() {
       </div>
     );
   }
-
-  const studioConfig = {
-    ...config,
-    unstable_history: history,
-  } as StudioProps['config'];
 
   return (
     <div style={{ height: '100vh' }}>
