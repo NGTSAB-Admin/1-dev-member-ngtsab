@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,7 +12,9 @@ import Directory from "./pages/Directory";
 import ProfileDetail from "./pages/ProfileDetail";
 import Resources from "./pages/Resources";
 import NotFound from "./pages/NotFound";
-import BlogStudio from "./pages/admin/BlogStudio";
+
+// Lazy load Sanity Studio to avoid React compiler-runtime issues
+const BlogStudio = lazy(() => import("./pages/admin/BlogStudio"));
 
 const queryClient = new QueryClient();
 
@@ -50,7 +53,11 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route path="/admin/blog/*" element={<BlogStudio />} />
+            <Route path="/admin/blog/*" element={
+              <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading Studio...</div>}>
+                <BlogStudio />
+              </Suspense>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
