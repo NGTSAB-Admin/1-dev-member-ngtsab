@@ -1,17 +1,16 @@
 import { defineConfig } from 'sanity';
 import { structureTool } from 'sanity/structure';
-import { visionTool } from '@sanity/vision';
 import { schemaTypes } from './schemas';
 
-const projectId = import.meta.env.VITE_SANITY_PROJECT_ID;
-const dataset = import.meta.env.VITE_SANITY_DATASET;
+const projectId = 'xe995fko';
+const dataset = 'production';
 
 export default defineConfig({
   name: 'default',
   title: 'Blog Studio',
   projectId,
   dataset,
-  plugins: [structureTool(), visionTool()],
+  plugins: [structureTool()],
   schema: {
     types: schemaTypes,
   },
