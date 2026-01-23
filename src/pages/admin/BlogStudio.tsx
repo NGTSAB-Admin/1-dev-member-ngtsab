@@ -1,13 +1,42 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Studio } from 'sanity';
+import { useEffect, useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Studio, type StudioProps } from 'sanity';
 import config from '@/sanity/sanity.config';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
+// Create a custom history adapter for Sanity Studio to work with React Router
+function useSanityHistory() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  return useMemo(
+    () => ({
+      get location() {
+        return {
+          pathname: location.pathname.replace('/admin/blog', '') || '/',
+          search: location.search,
+          hash: location.hash,
+        };
+      },
+      push: (path: string) => {
+        navigate(`/admin/blog${path === '/' ? '' : path}`);
+      },
+      replace: (path: string) => {
+        navigate(`/admin/blog${path === '/' ? '' : path}`, { replace: true });
+      },
+      listen: (listener: () => void) => {
+        return () => {}; // Return unsubscribe function
+      },
+    }),
+    [navigate, location]
+  );
+}
+
 export default function BlogStudio() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const history = useSanityHistory();
   const [isBlogger, setIsBlogger] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(true);
 
@@ -18,7 +47,6 @@ export default function BlogStudio() {
         return;
       }
 
-      // Query for blogger or admin role - use raw query to avoid type issues with new enum value
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -28,7 +56,6 @@ export default function BlogStudio() {
         console.error('Error checking blogger role:', error);
         setIsBlogger(false);
       } else {
-        // Check if user has blogger or admin role
         const hasAccess = data?.some(r => r.role === 'blogger' || r.role === 'admin') ?? false;
         setIsBlogger(hasAccess);
       }
@@ -70,9 +97,14 @@ export default function BlogStudio() {
     );
   }
 
+  const studioConfig = {
+    ...config,
+    unstable_history: history,
+  } as StudioProps['config'];
+
   return (
     <div style={{ height: '100vh' }}>
-      <Studio config={config} />
+      <Studio config={studioConfig} />
     </div>
   );
 }
