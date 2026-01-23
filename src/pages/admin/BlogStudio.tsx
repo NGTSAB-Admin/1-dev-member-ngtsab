@@ -1,57 +1,21 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createBrowserHistory } from 'history';
 import { Studio, type StudioProps } from 'sanity';
 import config from '@/sanity/sanity.config';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-// Create a custom history adapter for Sanity Studio to work with React Router
-function useSanityHistory() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const listenersRef = useRef(new Set<() => void>());
-
-  // Notify Sanity listeners whenever React Router location changes
-  useEffect(() => {
-    listenersRef.current.forEach((fn) => fn());
-  }, [location.pathname, location.search, location.hash]);
-
-  const toStudioPath = (path: string) => {
-    const normalized = path?.startsWith('/') ? path : `/${path ?? ''}`;
-    return normalized === '/' ? '' : normalized;
-  };
-
-  const toAppPath = (path: string) => `/admin/blog${toStudioPath(path)}`;
-
-  return useMemo(
-    () => ({
-      get location() {
-        return {
-          pathname: location.pathname.replace('/admin/blog', '') || '/',
-          search: location.search,
-          hash: location.hash,
-        };
-      },
-      push: (path: string) => {
-        navigate(toAppPath(path));
-      },
-      replace: (path: string) => {
-        navigate(toAppPath(path), { replace: true });
-      },
-      createHref: (path: string) => toAppPath(path),
-      listen: (listener: () => void) => {
-        listenersRef.current.add(listener);
-        return () => listenersRef.current.delete(listener);
-      },
-    }),
-    [navigate, location]
-  );
-}
-
 export default function BlogStudio() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const history = useSanityHistory();
+
+  // Let Sanity own its router using the standard `history` implementation.
+  // This avoids subtle mismatches with react-router's internal history.
+  const history = useMemo(
+    () => createBrowserHistory({ window }),
+    []
+  );
   const [isBlogger, setIsBlogger] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(true);
 
@@ -91,7 +55,8 @@ export default function BlogStudio() {
   }
 
   if (!user) {
-    navigate('/login');
+    // Avoid calling navigate during render
+    queueMicrotask(() => navigate('/login'));
     return null;
   }
 
