@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Users, BookOpen, LogOut, User } from 'lucide-react';
+import { Users, BookOpen, LogOut, User, Newspaper } from 'lucide-react';
 
 export function Header() {
   const { user, profile, logout } = useAuth();
@@ -18,6 +18,7 @@ export function Header() {
   const navLinks = [
     { to: '/directory', label: 'Directory', icon: Users },
     { to: '/resources', label: 'Resources', icon: BookOpen },
+    { to: '/admin/blog', label: 'Blog', icon: Newspaper },
   ];
 
   const isActive = (path: string) => location.pathname === path;
