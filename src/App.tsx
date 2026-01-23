@@ -11,6 +11,7 @@ import Directory from "./pages/Directory";
 import ProfileDetail from "./pages/ProfileDetail";
 import Resources from "./pages/Resources";
 import NotFound from "./pages/NotFound";
+import BlogStudio from "./pages/admin/BlogStudio";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/admin/blog/*" element={<BlogStudio />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

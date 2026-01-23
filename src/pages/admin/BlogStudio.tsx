@@ -18,17 +18,19 @@ export default function BlogStudio() {
         return;
       }
 
+      // Query for blogger or admin role - use raw query to avoid type issues with new enum value
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
-        .in('role', ['blogger', 'admin']);
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Error checking blogger role:', error);
         setIsBlogger(false);
       } else {
-        setIsBlogger(data && data.length > 0);
+        // Check if user has blogger or admin role
+        const hasAccess = data?.some(r => r.role === 'blogger' || r.role === 'admin') ?? false;
+        setIsBlogger(hasAccess);
       }
       setChecking(false);
     };
