@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Studio, type StudioProps } from 'sanity';
 import config from '@/sanity/sanity.config';
@@ -9,6 +9,19 @@ import { supabase } from '@/integrations/supabase/client';
 function useSanityHistory() {
   const navigate = useNavigate();
   const location = useLocation();
+  const listenersRef = useRef(new Set<() => void>());
+
+  // Notify Sanity listeners whenever React Router location changes
+  useEffect(() => {
+    listenersRef.current.forEach((fn) => fn());
+  }, [location.pathname, location.search, location.hash]);
+
+  const toStudioPath = (path: string) => {
+    const normalized = path?.startsWith('/') ? path : `/${path ?? ''}`;
+    return normalized === '/' ? '' : normalized;
+  };
+
+  const toAppPath = (path: string) => `/admin/blog${toStudioPath(path)}`;
 
   return useMemo(
     () => ({
@@ -20,13 +33,15 @@ function useSanityHistory() {
         };
       },
       push: (path: string) => {
-        navigate(`/admin/blog${path === '/' ? '' : path}`);
+        navigate(toAppPath(path));
       },
       replace: (path: string) => {
-        navigate(`/admin/blog${path === '/' ? '' : path}`, { replace: true });
+        navigate(toAppPath(path), { replace: true });
       },
+      createHref: (path: string) => toAppPath(path),
       listen: (listener: () => void) => {
-        return () => {}; // Return unsubscribe function
+        listenersRef.current.add(listener);
+        return () => listenersRef.current.delete(listener);
       },
     }),
     [navigate, location]
