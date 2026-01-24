@@ -1,10 +1,14 @@
 import { defineConfig } from 'sanity';
 import { structureTool } from 'sanity/structure';
 import { visionTool } from '@sanity/vision';
+import { createBrowserHistory } from 'history';
 import { schemaTypes } from './schemaTypes';
 
 const projectId = import.meta.env.VITE_SANITY_PROJECT_ID || 'xe995fko';
 const dataset = import.meta.env.VITE_SANITY_DATASET || 'production';
+
+// Create history at module scope to prevent re-mount loops
+const history = createBrowserHistory();
 
 export const config = defineConfig({
   name: 'ngtsab-blog',
@@ -19,4 +23,5 @@ export const config = defineConfig({
   schema: {
     types: schemaTypes,
   },
+  history,
 });
