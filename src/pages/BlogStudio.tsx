@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Studio } from 'sanity';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +6,6 @@ import { config } from '@/sanity/sanity.config';
 
 export default function BlogStudio() {
   const { user, isLoading: authLoading } = useAuth();
-  const navigate = useNavigate();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
 
@@ -49,6 +47,15 @@ export default function BlogStudio() {
     }
   }, [user, authLoading]);
 
+  // Redirect to login - using window.location since we're outside React Router
+  const redirectToLogin = () => {
+    window.location.href = '/login?redirect=' + encodeURIComponent('/admin/blog');
+  };
+
+  const redirectToDirectory = () => {
+    window.location.href = '/directory';
+  };
+
   // Show loading while checking auth and role
   if (authLoading || isCheckingRole) {
     return (
@@ -63,8 +70,15 @@ export default function BlogStudio() {
 
   // Redirect if not authenticated
   if (!user) {
-    navigate('/login', { state: { from: '/admin/blog' } });
-    return null;
+    redirectToLogin();
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
   // Show access denied if no admin/blogger role
@@ -78,7 +92,7 @@ export default function BlogStudio() {
             Only users with admin or blogger roles can access this area.
           </p>
           <button
-            onClick={() => navigate('/directory')}
+            onClick={redirectToDirectory}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
           >
             Go to Directory
