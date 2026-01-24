@@ -9,18 +9,50 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Users, BookOpen, LogOut, User } from 'lucide-react';
+import { Users, BookOpen, LogOut, User, PenSquare } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export function Header() {
   const { user, profile, logout } = useAuth();
   const location = useLocation();
+  const [canAccessBlog, setCanAccessBlog] = useState(false);
+
+  useEffect(() => {
+    const checkBlogAccess = async () => {
+      if (!user) {
+        setCanAccessBlog(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .in('role', ['admin', 'blogger']);
+
+        if (!error && data && data.length > 0) {
+          setCanAccessBlog(true);
+        } else {
+          setCanAccessBlog(false);
+        }
+      } catch (err) {
+        console.error('Error checking blog access:', err);
+        setCanAccessBlog(false);
+      }
+    };
+
+    checkBlogAccess();
+  }, [user]);
 
   const navLinks = [
     { to: '/directory', label: 'Directory', icon: Users },
     { to: '/resources', label: 'Resources', icon: BookOpen },
+    ...(canAccessBlog ? [{ to: '/admin/blog', label: 'Blog', icon: PenSquare }] : []),
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   const getInitials = () => {
     if (profile?.full_name) {
