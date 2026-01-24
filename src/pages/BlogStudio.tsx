@@ -12,6 +12,40 @@ export default function BlogStudio() {
   // Memoize config to prevent re-renders
   const studioConfig = useMemo(() => config, []);
 
+  // Dev-only diagnostics to confirm what exports we are actually getting at runtime.
+  // This helps distinguish between `react/compiler-runtime` vs `zustand` interop issues.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    (async () => {
+      try {
+        const rt = await import('react/compiler-runtime');
+        // eslint-disable-next-line no-console
+        console.log('[sanity-diag] react/compiler-runtime keys:', Object.keys(rt));
+        // eslint-disable-next-line no-console
+        console.log('[sanity-diag] react/compiler-runtime create typeof:', typeof (rt as any).create);
+        // eslint-disable-next-line no-console
+        console.log('[sanity-diag] react/compiler-runtime default typeof:', typeof (rt as any).default);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[sanity-diag] failed to import react/compiler-runtime', e);
+      }
+
+      try {
+        const zustand = await import('zustand');
+        // eslint-disable-next-line no-console
+        console.log('[sanity-diag] zustand keys:', Object.keys(zustand));
+        // eslint-disable-next-line no-console
+        console.log('[sanity-diag] zustand create typeof:', typeof (zustand as any).create);
+        // eslint-disable-next-line no-console
+        console.log('[sanity-diag] zustand default typeof:', typeof (zustand as any).default);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('[sanity-diag] failed to import zustand', e);
+      }
+    })();
+  }, []);
+
   useEffect(() => {
     const checkAccess = async () => {
       if (!user) {
