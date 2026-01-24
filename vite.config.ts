@@ -3,6 +3,31 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
+const compilerRuntimeShimPath = path.resolve(
+  __dirname,
+  "./src/lib/react-compiler-runtime-shim.ts"
+);
+
+/**
+ * Force all `react/compiler-runtime*` imports (including optimizeDeps / prebundled deps)
+ * to resolve to our local shim. This is more reliable than alias alone.
+ */
+function reactCompilerRuntimeShimPlugin() {
+  return {
+    name: "react-compiler-runtime-shim-plugin",
+    enforce: "pre" as const,
+    resolveId(id: string) {
+      if (id === "react/compiler-runtime" || id === "react/compiler-runtime.js") {
+        return compilerRuntimeShimPath;
+      }
+      if (id.startsWith("react/compiler-runtime/")) {
+        return compilerRuntimeShimPath;
+      }
+      return null;
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -14,9 +39,13 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     // If esbuild pre-bundles a module that references react/compiler-runtime before
     // aliasing kicks in, it can lock in the wrong resolution.
-    exclude: ["react/compiler-runtime"],
+    exclude: ["react/compiler-runtime", "react/compiler-runtime.js"],
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    reactCompilerRuntimeShimPlugin(),
+    react(),
+    mode === "development" && componentTagger(),
+  ].filter(Boolean),
   resolve: {
     alias: [
       { find: "@", replacement: path.resolve(__dirname, "./src") },
@@ -26,11 +55,11 @@ export default defineConfig(({ mode }) => ({
       // We force all of them to resolve to the same shim.
       {
         find: /^react\/compiler-runtime(?:\.js)?$/,
-        replacement: path.resolve(__dirname, "./src/lib/react-compiler-runtime-shim.ts"),
+        replacement: compilerRuntimeShimPath,
       },
       {
         find: /^react\/compiler-runtime\/.*/,
-        replacement: path.resolve(__dirname, "./src/lib/react-compiler-runtime-shim.ts"),
+        replacement: compilerRuntimeShimPath,
       },
     ],
   },
