@@ -18,18 +18,20 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      // Shim for Sanity Studio v3 compatibility with React 18
-      "react/compiler-runtime": path.resolve(
-        __dirname,
-        "./src/lib/react-compiler-runtime-shim.ts"
-      ),
-      // Some bundles append an extension.
-      "react/compiler-runtime.js": path.resolve(
-        __dirname,
-        "./src/lib/react-compiler-runtime-shim.ts"
-      ),
-    },
+    alias: [
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+
+      // Shim for Sanity Studio v3 compatibility with React 18.
+      // IMPORTANT: Sanity bundles can reference several variants (with extension, with subpaths).
+      // We force all of them to resolve to the same shim.
+      {
+        find: /^react\/compiler-runtime(?:\.js)?$/,
+        replacement: path.resolve(__dirname, "./src/lib/react-compiler-runtime-shim.ts"),
+      },
+      {
+        find: /^react\/compiler-runtime\/.*/,
+        replacement: path.resolve(__dirname, "./src/lib/react-compiler-runtime-shim.ts"),
+      },
+    ],
   },
 }));
