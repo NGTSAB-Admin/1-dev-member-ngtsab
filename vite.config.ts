@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Shim for Sanity Studio v3 compatibility with React 18
+      "react/compiler-runtime": path.resolve(__dirname, "./src/lib/react-compiler-runtime-shim.ts"),
     },
   },
 }));
