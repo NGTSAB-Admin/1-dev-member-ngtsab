@@ -10,6 +10,7 @@ import SetPassword from "./pages/SetPassword";
 import Directory from "./pages/Directory";
 import ProfileDetail from "./pages/ProfileDetail";
 import Resources from "./pages/Resources";
+import BlogStudio from "./pages/BlogStudio";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/admin/blog/*" element={<BlogStudio />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
