@@ -8,6 +8,18 @@ const compilerRuntimeShimPath = path.resolve(
   "./src/lib/react-compiler-runtime-shim.ts"
 );
 
+// Force ESM entrypoints for packages that are frequently pulled in by Sanity Studio.
+// This avoids fragile CJS/ESM named-export interop issues inside Vite's pre-bundling.
+const zustandEsmEntryPath = path.resolve(
+  __dirname,
+  "./node_modules/zustand/esm/index.mjs"
+);
+
+const historyEsmEntryPath = path.resolve(
+  __dirname,
+  "./node_modules/history/index.js"
+);
+
 /**
  * Force all `react/compiler-runtime*` imports (including optimizeDeps / prebundled deps)
  * to resolve to our local shim. This is more reliable than alias alone.
@@ -54,6 +66,11 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: [
       { find: "@", replacement: path.resolve(__dirname, "./src") },
+
+      // Sanity depends on zustand + history, and Vite can sometimes resolve their CJS
+      // entrypoints during optimizeDeps which breaks named exports (`create`, `createBrowserHistory`).
+      { find: /^zustand$/, replacement: zustandEsmEntryPath },
+      { find: /^history$/, replacement: historyEsmEntryPath },
 
       // Shim for Sanity Studio v3 compatibility with React 18.
       // IMPORTANT: Sanity bundles can reference several variants (with extension, with subpaths).
