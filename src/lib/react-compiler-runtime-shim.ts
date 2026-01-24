@@ -35,4 +35,17 @@ export function useMemoCache(size: number) {
   return Array.from({ length: Math.max(0, size) });
 }
 
-export default { c, create, useMemoCache };
+/**
+ * Some compiled bundles import the *default* export and call it as a function.
+ * Provide a callable default export that behaves like `create()`/`c()`.
+ */
+function compilerRuntimeDefault(n: number) {
+  return c(n);
+}
+
+// Attach named exports onto the callable default for maximum interop.
+(compilerRuntimeDefault as any).c = c;
+(compilerRuntimeDefault as any).create = create;
+(compilerRuntimeDefault as any).useMemoCache = useMemoCache;
+
+export default compilerRuntimeDefault;
