@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Studio } from 'sanity';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +10,9 @@ export default function BlogStudio() {
   const navigate = useNavigate();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
+
+  // Memoize config to prevent re-renders
+  const studioConfig = useMemo(() => config, []);
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -87,7 +90,7 @@ export default function BlogStudio() {
 
   return (
     <div style={{ height: '100vh', width: '100%' }}>
-      <Studio config={config} />
+      <Studio config={studioConfig} />
     </div>
   );
 }
