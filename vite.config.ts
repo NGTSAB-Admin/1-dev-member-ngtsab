@@ -20,6 +20,8 @@ const historyEsmEntryPath = path.resolve(
   "./node_modules/history/index.js"
 );
 
+const zustandShimPath = path.resolve(__dirname, "./src/lib/zustand-shim.ts");
+
 /**
  * Force all `react/compiler-runtime*` imports (including optimizeDeps / prebundled deps)
  * to resolve to our local shim. This is more reliable than alias alone.
@@ -69,7 +71,8 @@ export default defineConfig(({ mode }) => ({
 
       // Sanity depends on zustand + history, and Vite can sometimes resolve their CJS
       // entrypoints during optimizeDeps which breaks named exports (`create`, `createBrowserHistory`).
-      { find: /^zustand$/, replacement: zustandEsmEntryPath },
+      // Use a local shim that guarantees the named `create` export exists.
+      { find: /^zustand$/, replacement: zustandShimPath },
       { find: /^history$/, replacement: historyEsmEntryPath },
 
       // Shim for Sanity Studio v3 compatibility with React 18.
