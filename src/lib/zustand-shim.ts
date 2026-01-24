@@ -6,10 +6,11 @@
 //
 // Sanity Studio expects `create` to be a named export, so we force it to exist.
 
-// Import the real ESM entry directly (avoid recursion because Vite aliases `zustand` to this file).
+// Import the real ESM entry by file path to bypass `zustand` package export maps.
+// We cannot use `zustand/esm/index.mjs` because it's not a public export.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - .mjs has no TS typings in this path, but Vite can bundle it.
-import * as real from 'zustand/esm/index.mjs';
+import * as real from '../../../node_modules/zustand/esm/index.mjs';
 
 // Re-export vanilla helpers exactly like Zustand does.
 export * from 'zustand/vanilla';
