@@ -40,6 +40,11 @@ export default defineConfig(({ mode }) => ({
     // If esbuild pre-bundles a module that references react/compiler-runtime before
     // aliasing kicks in, it can lock in the wrong resolution.
     exclude: ["react/compiler-runtime", "react/compiler-runtime.js"],
+
+    // Sanity Studio pulls in zustand. In some Vite optimizeDeps scenarios,
+    // named exports (like `create`) can become undefined unless we force interop.
+    // This avoids brittle deep-import aliases like `zustand/esm` (not exported in all builds).
+    needsInterop: ["zustand"],
   },
   plugins: [
     reactCompilerRuntimeShimPlugin(),
@@ -49,11 +54,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: [
       { find: "@", replacement: path.resolve(__dirname, "./src") },
-
-      // Sanity frequently imports `create` from zustand. In some ESM/CJS interop scenarios
-      // Vite can end up with an undefined default/named export during prebundling.
-      // Point `zustand` at its ESM entry.
-      { find: /^zustand$/, replacement: "zustand/esm" },
 
       // Shim for Sanity Studio v3 compatibility with React 18.
       // IMPORTANT: Sanity bundles can reference several variants (with extension, with subpaths).
