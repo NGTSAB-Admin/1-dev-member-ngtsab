@@ -50,6 +50,11 @@ export default defineConfig(({ mode }) => ({
     alias: [
       { find: "@", replacement: path.resolve(__dirname, "./src") },
 
+      // Sanity frequently imports `create` from zustand. In some ESM/CJS interop scenarios
+      // Vite can end up with an undefined default/named export during prebundling.
+      // Point `zustand` at its ESM entry.
+      { find: /^zustand$/, replacement: "zustand/esm" },
+
       // Shim for Sanity Studio v3 compatibility with React 18.
       // IMPORTANT: Sanity bundles can reference several variants (with extension, with subpaths).
       // We force all of them to resolve to the same shim.
