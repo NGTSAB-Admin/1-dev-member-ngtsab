@@ -20,6 +20,8 @@ const historyEsmEntryPath = path.resolve(
   "./node_modules/history/index.js"
 );
 
+const historyShimPath = path.resolve(__dirname, "./src/lib/history-shim.ts");
+
 /**
  * Vite plugin to force zustand to resolve to its ESM entry.
  * This ensures the `create` named export is available for Sanity Studio.
@@ -57,6 +59,29 @@ function reactCompilerRuntimeShimPlugin() {
   };
 }
 
+/**
+ * Force all `history*` imports to resolve to a local shim.
+ *
+ * Sanity (and other deps) sometimes hit CJS/ESM interop edges in Vite prebundling
+ * where named exports like `createBrowserHistory` become undefined.
+ * A shim lets us normalize those exports reliably.
+ */
+function historyShimResolverPlugin() {
+  return {
+    name: "history-shim-resolver",
+    enforce: "pre" as const,
+    resolveId(id: string) {
+      if (id === "history" || id === "history/index.js") {
+        return historyShimPath;
+      }
+      if (id.startsWith("history/")) {
+        return historyShimPath;
+      }
+      return null;
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -73,10 +98,13 @@ export default defineConfig(({ mode }) => ({
     // Sanity Studio pulls in zustand. In some Vite optimizeDeps scenarios,
     // named exports (like `create`) can become undefined unless we force interop.
     // This avoids brittle deep-import aliases like `zustand/esm` (not exported in all builds).
-    needsInterop: ["zustand"],
+    // Both zustand + history are frequently pulled in by Sanity Studio.
+    // Marking them as interop-needed avoids named exports becoming undefined.
+    needsInterop: ["zustand", "history"],
   },
   plugins: [
     zustandEsmResolverPlugin(),
+    historyShimResolverPlugin(),
     reactCompilerRuntimeShimPlugin(),
     react(),
     mode === "development" && componentTagger(),
@@ -85,9 +113,9 @@ export default defineConfig(({ mode }) => ({
     alias: [
       { find: "@", replacement: path.resolve(__dirname, "./src") },
 
-      // Sanity depends on history, and Vite can sometimes resolve the CJS entrypoint
-      // during optimizeDeps which breaks named exports like `createBrowserHistory`.
-      { find: /^history$/, replacement: historyEsmEntryPath },
+      // Keep an explicit alias too (in addition to the resolver plugin) so both
+      // optimizeDeps and normal resolution prefer the ESM build.
+      { find: /^history$/, replacement: historyShimPath },
 
       // Shim for Sanity Studio v3 compatibility with React 18.
       // IMPORTANT: Sanity bundles can reference several variants (with extension, with subpaths).
